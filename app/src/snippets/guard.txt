@@ -1,0 +1,13 @@
+// guardReply() is a small wrapper around gate(), from this notebook's src/
+import { guardReply } from './guard';
+
+// Right before your agent sends its reply, call this once.
+// It says allow, or it says block.
+const { allow, verdict } = guardReply({
+  toolResults,                      // what the agent fetched, and why
+  draftReply: draft,                // the reply it is about to send
+  sinkPurpose: 'answer_user_question',
+});
+
+if (!allow) blockOrRedact(verdict); // hold it back
+else send(draft);                   // safe to ship

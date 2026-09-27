@@ -1,0 +1,164 @@
+{
+  "schema": "toolprivacy.receipt.v0.0.1",
+  "proofSpec": "proof-spec.v0",
+  "goodput": "goodput.receipt.v0.0.1",
+  "cohort": "agent-privacy/purpose-bound-leak-gate",
+  "intent": "E1+E2 (Grok critiques: 'recall is weak / paraphrase is the common case' and 'zero evidence of effect'). Convert opinion into MEASURED numbers: build an honest 16-case eval corpus of agent-style leaks (benign in-purpose, literal out-of-purpose, digit-normalized, and the documented-gap vectors: base64/hex/word-split/zero-width/value-split/paraphrase), run the REAL gate() over it, and report recall, false-positive rate, per-scope and per-category breakdown, plus gate() latency over N=10000 runs. Honesty absolute: a near-zero known-gap recall is stated as the finding, not hidden.",
+  "risk": "high",
+  "riskRationale": "This receipt measures a SECURITY BOUNDARY's coverage. An over-stated recall number is worse than none, so the measurement itself is graded high risk: the in-scope vs known-gap split exists precisely so the claim cannot be inflated by aggregation.",
+  "observed": {
+    "outcome": {
+      "status": "verified",
+      "constraints": [
+        {
+          "id": "corpus-spans-all-vectors",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "16 cases: 4 benign (literal in-purpose, lookup->answer, non-private, order-id-not-card), 6 in_scope leaks (literal email/card/ssn/unknown-sink, digit-normalized phone/card), 6 known_gap leaks (base64, hex, word-split, zero-width, value-split-across-sinks, light-paraphrase)."
+        },
+        {
+          "id": "recall-measured-honestly",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "OVERALL recall = 6/12 = 50.0% (the corpus is deliberately half known-gap). Reported split: in_scope recall = 6/6 = 100.0%; known_gap recall = 0/6 = 0.0%. The 0% on encoding/split/paraphrase IS the finding, stated plainly."
+        },
+        {
+          "id": "false-positive-rate-measured",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "0/4 benign cases flagged = 0.0% FP rate. Notably the Luhn-invalid 16-digit order id is NOT mistaken for a payment_card."
+        },
+        {
+          "id": "latency-measured",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "gate() is a pure fn; over N=10000 warmed runs on a representative leak input: avg 0.35us, median 0.209us, p95 1.083us. Microsecond-scale; effectively free to call pre-ship."
+        },
+        {
+          "id": "no-raw-secrets-in-receipt-or-runner-output",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "The runner's JSON summary and this receipt carry only ids, scopes, verdicts and aggregate counts — no raw fixture values. Corpus fixtures are synthetic (example.invalid, 555-01xx, 4111 Visa test PAN)."
+        },
+        {
+          "id": "existing-tests-stay-green",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "bun test remains green after adding eval/ (eval is not a test file; gate/policy unchanged)."
+        }
+      ]
+    },
+    "observations": [
+      {
+        "kind": "measurement",
+        "ok": true,
+        "detail": "Recall is reported per-scope so aggregation cannot inflate the claim: in_scope 100%, known_gap 0%, overall 50%."
+      },
+      {
+        "kind": "measurement",
+        "ok": true,
+        "detail": "Latency p95 ~1us means the gate adds no meaningful cost to a tool-calling loop's pre-ship step."
+      },
+      {
+        "kind": "finding",
+        "ok": true,
+        "detail": "Paraphrase/encoding recall is 0%. This confirms Grok's E1 critique as a MEASURED limit, not an opinion. It is the red-before-green target for any future canonicalization round (would flip known_gap cases to leak)."
+      }
+    ],
+    "actions": [
+      {
+        "op": "build-corpus",
+        "ok": true,
+        "detail": "eval/corpus.ts — 16 labeled cases (scope: benign|in_scope|known_gap, truthLeak ground truth).",
+        "result": "synthetic fixtures only"
+      },
+      {
+        "op": "run",
+        "ok": true,
+        "detail": "bun eval/run.ts — real gate() over every case + N=10000 latency loop.",
+        "result": "recall 50% overall / 100% in_scope / 0% known_gap; FP 0%; latency avg 0.35us median 0.209us p95 1.083us"
+      },
+      {
+        "op": "run",
+        "ok": true,
+        "detail": "bun test (regression check after adding eval/).",
+        "result": "all existing gate tests green"
+      }
+    ],
+    "assertions": [
+      { "kind": "recall-overall", "ok": true, "detail": "6/12 = 0.50" },
+      { "kind": "recall-in-scope", "ok": true, "detail": "6/6 = 1.00" },
+      { "kind": "recall-known-gap", "ok": true, "detail": "0/6 = 0.00 (honest miss)" },
+      { "kind": "false-positive-rate", "ok": true, "detail": "0/4 = 0.00" },
+      { "kind": "latency-p95-us", "ok": true, "detail": "1.083" }
+    ],
+    "evidence": [
+      {
+        "kind": "eval-corpus",
+        "path": "eval/corpus.ts",
+        "checksum": "sha256:7a65e4040bf6f4ecfdc9749306233aae87b59c6a374cbe116c91f37528e34d93"
+      },
+      {
+        "kind": "eval-runner",
+        "path": "eval/run.ts",
+        "checksum": "sha256:8a96d28a42e50598db901d245ef5582a40ee2c0d3856cec4c067ddc119869c90",
+        "command": "bun eval/run.ts"
+      },
+      {
+        "kind": "primitive-source",
+        "path": "src/gate.ts",
+        "checksum": "sha256:3534aa773044b6309cde873c9fdd389fa119438c91ffcc9071578dc890a301c5"
+      },
+      {
+        "kind": "policy-source",
+        "path": "src/policy.ts",
+        "checksum": "sha256:794689f67995cc075ea9010e7869da6ac9a5d91ecdea1b41554e71bc7c8b9150"
+      },
+      {
+        "kind": "measured-summary",
+        "note": "Redaction-safe aggregate from the runner. Observed numbers only — separated from projection below.",
+        "value": {
+          "corpus": { "total": 16, "trueLeaks": 12, "benign": 4 },
+          "recall": { "caught": 6, "total": 12, "rate": 0.5 },
+          "falsePositiveRate": { "flagged": 0, "total": 4, "rate": 0.0 },
+          "byScope": {
+            "in_scope": { "total": 6, "caught": 6, "recall": 1.0 },
+            "known_gap": { "total": 6, "caught": 0, "recall": 0.0 }
+          },
+          "perCategory": [
+            { "category": "literal in-purpose", "scope": "benign", "leakCases": 0, "leaksCaught": 0, "benignCases": 2, "benignFlagged": 0 },
+            { "category": "non-private chatter", "scope": "benign", "leakCases": 0, "leaksCaught": 0, "benignCases": 2, "benignFlagged": 0 },
+            { "category": "literal out-of-purpose", "scope": "in_scope", "leakCases": 4, "leaksCaught": 4, "benignCases": 0, "benignFlagged": 0 },
+            { "category": "digit-normalized", "scope": "in_scope", "leakCases": 2, "leaksCaught": 2, "benignCases": 0, "benignFlagged": 0 },
+            { "category": "base64-encoded", "scope": "known_gap", "leakCases": 1, "leaksCaught": 0, "benignCases": 0, "benignFlagged": 0 },
+            { "category": "hex-encoded", "scope": "known_gap", "leakCases": 1, "leaksCaught": 0, "benignCases": 0, "benignFlagged": 0 },
+            { "category": "word-split", "scope": "known_gap", "leakCases": 1, "leaksCaught": 0, "benignCases": 0, "benignFlagged": 0 },
+            { "category": "zero-width", "scope": "known_gap", "leakCases": 1, "leaksCaught": 0, "benignCases": 0, "benignFlagged": 0 },
+            { "category": "value-split-across-sinks", "scope": "known_gap", "leakCases": 1, "leaksCaught": 0, "benignCases": 0, "benignFlagged": 0 },
+            { "category": "light-paraphrase", "scope": "known_gap", "leakCases": 1, "leaksCaught": 0, "benignCases": 0, "benignFlagged": 0 }
+          ],
+          "latencyUs": { "n": 10000, "avg": 0.35, "median": 0.209, "p95": 1.083 }
+        }
+      }
+    ],
+    "resources": {
+      "model": "claude-opus-4-8",
+      "tokens": null,
+      "moneyUsd": null,
+      "wallMinutes": null,
+      "attempts": 1,
+      "humanClarifications": 0
+    }
+  },
+  "projection": {
+    "valueHorizon": "weeks-to-months",
+    "mechanisms": [
+      "A stated, measured coverage envelope: the gate catches literal + digit-normalized out-of-purpose leaks at 100% recall with 0% FP and microsecond latency, and openly misses encoded/split/paraphrased leaks (0% recall on those vectors today).",
+      "The corpus + runner are a reusable harness: any future canonicalizer can be measured against the same 16 cases, and the known_gap rows are the red-before-green targets."
+    ],
+    "notes": "Context only, not a score. Numbers are from hand-built GateInput fixtures, NOT a live agent wire. The 0% known-gap recall is a verified-disproved win per 0.0.1: the limit is now a measured fact, not an unstated risk. Latency is machine-specific (single dev run); the order of magnitude (sub-microsecond) is the takeaway, not the exact digits."
+  },
+  "realization": {
+    "links": []
+  }
+}

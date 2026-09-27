@@ -1,0 +1,72 @@
+{
+  "state": "grok-fanout integrated; site upgraded; ready for redeploy (pending Jordan go)",
+  "iteration": 2,
+  "northStar": "Purpose-bound privacy leaks in tool-using LLM agents are detectable by a deterministic gate BEFORE the response ships, and the gate's own output never re-leaks the secret nor any value-derived token.",
+  "constraint": "Local/notebook only. No public push, no prod deploy, no publishing the package without explicit Jordan go. Planted secrets are synthetic test fixtures only. flare-ui (@cloudflare/gen-ui) is read-only; feedback goes to findings.md. 0.0.1 + private. bun + Biome + TypeScript ESM.",
+  "detectionScope": "The gate detects the LITERAL and DIGIT-NORMALIZED presence (spaces/dashes/parens stripped for phone/card/ssn) of a tracked value in a single sink. It does NOT decode base64/hex/url-encoding, undo word-substitution, strip zero-width/homoglyph characters, or reassemble a value split across multiple sinks. All claims below are CONDITIONAL on this documented scope.",
+  "falsifiable": "WITHIN the documented detection scope (literal + digit-normalized presence): if a planted purpose-bound secret (email fetched for send_calendar_invite) leaked literally or in digit-normalized form into an unrelated summary can pass the gate undetected, OR if a benign in-purpose use is falsely flagged, OR if the gate's verdict echoes the raw secret or any value-derived token, the claim is disproven. Vectors OUTSIDE the documented scope (encoding, word-split, zero-width, cross-sink split) are explicit KNOWN GAPS, not falsifiers of the in-scope claim; they are tracked in unproven as a named future iteration.",
+  "securityGate": "The gate's output is a closed-set verdict + field path + private class + bound/observed purpose + reason. It must never contain a raw private value AND must contain NO value-derived token (no hash, no fingerprint). Because nothing in the verdict depends on the secret's bits, it is provably non-reversible. Re-scan before every commit.",
+  "loadBearingPrimitive": "src/gate.ts \u2014 pure, synchronous gate(GateInput) -> Verdict. Policy in the single editable file src/policy.ts.",
+  "proven": [
+    {
+      "claim": "WITHIN scope: a planted purpose-bound secret (email fetched for send_calendar_invite, leaked into a general_summary message) is CAUGHT as a leak verdict with the correct field, private class, and bound/observed purpose.",
+      "receipt": "receipts/01-planted-leak-caught.json"
+    },
+    {
+      "claim": "RED-BEFORE-GREEN is mechanical: disabling the purpose-mismatch check turns the planted-leak tests RED; restoring it returns the suite GREEN (16/16).",
+      "receipt": "receipts/01-planted-leak-caught.json"
+    },
+    {
+      "claim": "A benign in-purpose use (email fetched for the invite, used IN the invite tool call) PASSES with zero violations.",
+      "receipt": "receipts/01-planted-leak-caught.json"
+    },
+    {
+      "claim": "The gate's verdict never echoes the raw secret AND carries no value-derived token (no fingerprint/hash); it is provably non-reversible because every violation field is structural. Verified by key-set assertion and by two different secrets of the same class/flow producing byte-identical verdicts.",
+      "receipt": "receipts/05-fingerprint-reversible.json"
+    },
+    {
+      "claim": "SUBTRACTION: the reversible fnv1a fingerprint was removed entirely (the fingerprint() function and the Violation.fingerprint field deleted); the verdict is structural-only and the suite stayed GREEN (16/16) after the deletion. The brute-force reversal in receipts/05 is no longer possible \u2014 there is nothing left to invert.",
+      "receipt": "receipts/03-fingerprint-subtraction.json"
+    },
+    {
+      "claim": "Realized (partial): the dogfood Worker (app/worker/index.ts) reuses the SHIPPED gate unchanged and the app builds (tsc --noEmit + vite build). In-repo second-artifact reuse.",
+      "receipt": "receipts/04-reusable-hammer-realization.json"
+    },
+    {
+      "claim": "The gate is deterministic: 50 repeated runs over the same input produce byte-identical verdicts.",
+      "receipt": "receipts/01-planted-leak-caught.json"
+    },
+    {
+      "claim": "False-positive control: a 13-19 digit order ID / concatenated digit run is NOT flagged as a payment_card (payment_card requires a Luhn-valid digit run; phone requires phone-shaped grouping). A Luhn-valid synthetic card IS caught.",
+      "receipt": "receipts/05-fingerprint-reversible.json"
+    },
+    "Deployed live at toolprivacy.coey.dev; gate proven on the real wire: leak case -> verdict leak (1 violation, no raw secret echoed), benign in-purpose -> pass (0 violations). The hand-built-fixture proof is now a REALIZED public-URL proof."
+  ],
+  "unproven": [
+    "Encoding/canonicalization coverage (NAMED FUTURE ITERATION): catch base64/hex/url-encoded values, word-substitution, zero-width/homoglyph obfuscation, and values split across multiple sinks. Currently DOCUMENTED KNOWN GAPS with explicit pass-asserting tests (test/gate.test.ts -> KNOWN GAPS) that would flip to leak when a canonicalizer lands.",
+    "The gate catches leaks on a REAL agent wire (live tool-using LLM), not just hand-built GateInput fixtures.",
+    "The dogfood example renders the verdict via @cloudflare/gen-ui and runs (see app/; gen-ui package could not be resolved from the registry \u2014 see findings.md feedback).",
+    "Detector coverage is adequate for real PII (names, free-text addresses, partial identifiers) without unacceptable false positives.",
+    "Purpose declarations can be trusted/derived in practice (who declares the purpose, and can a hostile model lie about it).",
+    "ToolPrivacyBench parity: the gate's catch-rate measured against the published benchmark."
+  ],
+  "disproven": [
+    {
+      "claim": "Naive substring redaction alone (without purpose-binding) is sufficient to detect leaks.",
+      "receipt": "receipts/02-substring-only-insufficient.json",
+      "note": "A value used IN its declared purpose is indistinguishable from a leak under substring-presence-only logic; only purpose-binding separates benign use from leak. Verified-disproved."
+    },
+    {
+      "claim": "An unkeyed 32-bit FNV-1a fingerprint of a private value is non-reversible.",
+      "receipt": "receipts/05-fingerprint-reversible.json",
+      "note": "DISPROVED. A low-entropy secret (US SSN, ~30 bits of structured search space) was brute-forced back from the 32-bit fingerprint. Consequence: the fingerprint was REMOVED entirely; the verdict now carries no value-derived token. Verified-disproved; no raw secret stored in the receipt."
+    }
+  ],
+  "openQuestions": [
+    "Who is the authority for a tool call's declaredPurpose, and how is it bound at call time so a model cannot relabel a leak as in-purpose after the fact?",
+    "Should unknown sink purposes fail closed (current: leak) or route to inconclusive? Current choice favors safety; needs real-traffic validation.",
+    "Can the purpose taxonomy + compatibility map be derived from an agent's tool schema instead of hand-authored?",
+    "Which canonicalization layers (base64/hex/url decode, separator/word normalization, zero-width strip, cross-sink accumulation) are worth the false-positive cost in a later iteration?",
+    "How does this fold into My AX as a reusable pre-ship gate, alongside gateproof/mergegate?"
+  ]
+}

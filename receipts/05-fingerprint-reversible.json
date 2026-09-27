@@ -1,0 +1,116 @@
+{
+  "schema": "toolprivacy.receipt.v0.0.1",
+  "proofSpec": "proof-spec.v0",
+  "goodput": "goodput.receipt.v0.0.1",
+  "cohort": "agent-privacy/leak-guard-self-safety",
+  "intent": "Test the security-gate claim that the gate's emitted token is non-reversible. Round-1 emitted an unkeyed 32-bit FNV-1a fingerprint of each private value and called it 'non-reversible'. Hypothesis under test: an unkeyed 32-bit fingerprint of a low-entropy private field (US SSN) is non-reversible.",
+  "risk": "high",
+  "riskRationale": "The artifact is a security boundary. A gate that re-emits a reversible token of the secret is itself a second leak channel. Disproving the non-reversibility claim is load-bearing for the gate's own safety invariant.",
+  "observed": {
+    "outcome": {
+      "status": "verified-disproved",
+      "constraints": [
+        {
+          "id": "unkeyed-32bit-fingerprint-is-non-reversible",
+          "result": "fail",
+          "definedBeforeRun": true,
+          "detail": "DISPROVED. A forward brute-force over the structured US-SSN space (3-2-4 digits, ~10^9 ≈ 30 bits) recovered the EXACT planted SSN preimage from the 32-bit fingerprint in 123,456,789 iterations / 21.3s on a laptop, single-threaded in bun. recoveredMatchesPlanted = true. Low-entropy fields are trivially reversible from an unkeyed short digest."
+        },
+        {
+          "id": "fix-emit-no-value-derived-token",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "FIX applied: the fingerprint was REMOVED from the Violation type and gate output entirely. A violation now carries only {sinkId, sinkKind, fieldPath, privateClass, boundPurpose, observedPurpose, reason} — no hash, no fingerprint. With no secret-derived bits in the verdict, there is nothing to invert."
+        },
+        {
+          "id": "non-reversibility-test-two-secrets-identical-verdict",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "Two DIFFERENT secrets of the same class/flow produce byte-identical serialized verdicts (test/gate.test.ts -> NON-REVERSIBILITY). The verdict therefore cannot distinguish, let alone recover, the secret."
+        },
+        {
+          "id": "false-positive-control-order-id-not-a-card",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "Companion hardening (Dane R2): payment_card now requires a Luhn-valid 13-19 digit run and phone requires phone-shaped grouping, so a 13-19 digit order ID is classified as nothing (trackedFields=0) instead of a payment_card. A Luhn-valid synthetic card (4111…) is still caught."
+        }
+      ]
+    },
+    "observations": [
+      {
+        "kind": "attack-setup",
+        "ok": true,
+        "detail": "Recomputed the round-1 fnv1a() over a synthetic planted SSN fixture; took the resulting 32-bit fingerprint as the brute-force target. Search space enumerated as zero-padded 3-2-4 SSN strings."
+      },
+      {
+        "kind": "attack-result",
+        "ok": true,
+        "detail": "First matching preimage found equals the planted fixture (exact recovery, not merely a collision), because the real value lies early in the forward-ordered search."
+      }
+    ],
+    "actions": [
+      {
+        "op": "brute-force",
+        "ok": true,
+        "detail": "bun harness: enumerate SSN space, compute fnv1a, stop on fingerprint match. Raw secret and target fingerprint intentionally NOT recorded.",
+        "result": "recovered exact preimage @ iteration 123,456,789 in 21.3s; ~10^9 search space (~30 bits)"
+      },
+      {
+        "op": "fix-and-run",
+        "ok": true,
+        "detail": "Removed fingerprint from types.ts/gate.ts; added key-set + two-secret non-reversibility tests; added Luhn + boundary false-positive control.",
+        "result": "16 pass / 0 fail / 83 expect() calls"
+      }
+    ],
+    "assertions": [
+      { "kind": "reversible-low-entropy", "ok": true, "detail": "32-bit unkeyed digest of a ~30-bit field is reversible by exhaustive search in seconds" },
+      { "kind": "fix-removes-token", "ok": true, "detail": "verdict now structural-only; no value-derived bits remain" },
+      { "kind": "no-raw-secret-in-receipt", "ok": true, "detail": "neither the SSN nor its fingerprint is stored in this receipt" }
+    ],
+    "evidence": [
+      {
+        "kind": "negative-result",
+        "path": "findings.md#nr-2",
+        "note": "Recorded so the reversible-fingerprint design is not re-attempted."
+      },
+      {
+        "kind": "primitive-source",
+        "path": "src/gate.ts",
+        "checksum": "sha256:9be3396d8d0ac57f031ee5c774bd98a9756cdbaa96ab1ef838c3313100b2d946",
+        "note": "fingerprint() removed; violations carry no value-derived token."
+      },
+      {
+        "kind": "policy-source",
+        "path": "src/policy.ts",
+        "checksum": "sha256:794689f67995cc075ea9010e7869da6ac9a5d91ecdea1b41554e71bc7c8b9150",
+        "note": "payment_card now Luhn + boundary gated; phone requires phone-shaped grouping."
+      },
+      {
+        "kind": "test-suite",
+        "path": "test/gate.test.ts",
+        "checksum": "sha256:fee027b2ef84baa544f0d1e90569bb56ea6233f2ce18ffcd3d0b4f6b14b627dc",
+        "command": "bun test",
+        "result": "16 pass / 0 fail / 83 expect() calls"
+      }
+    ],
+    "resources": {
+      "model": "claude-opus-4-8",
+      "tokens": null,
+      "moneyUsd": null,
+      "wallMinutes": 0.36,
+      "attempts": 1,
+      "humanClarifications": 0
+    }
+  },
+  "projection": {
+    "valueHorizon": "immediate",
+    "mechanisms": [
+      "Establishes the rule that a leak-guard's own output must contain NO value-derived token, not merely 'no raw value' — a reusable safety constraint for gateproof/mergegate/My AX.",
+      "Bounds the attack: any unkeyed short digest of a low-entropy field is reversible; if cross-receipt correlation is ever needed, it must use a keyed HMAC with a per-run salt that is never emitted."
+    ],
+    "notes": "Context only. Not a score. A verified-disproved result is a first-class artifact per MY_REPO_SHAPE."
+  },
+  "realization": {
+    "links": []
+  }
+}

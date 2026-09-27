@@ -1,0 +1,114 @@
+{
+  "schema": "toolprivacy.receipt.v0.0.1",
+  "proofSpec": "proof-spec.v0",
+  "goodput": "goodput.receipt.v0.0.1",
+  "goodputKind": "reusable-hammer",
+  "cohort": "agent-privacy/purpose-bound-leak-gate",
+  "intent": "Record the gate becoming a REUSABLE HAMMER: a second artifact (the AX-branded dogfood surface in app/) consumes the exact same gate primitive, unchanged, through a Cloudflare Worker, and renders its verdict as generative UI. This separates projected reuse from a REALIZED reuse link.",
+  "risk": "medium",
+  "riskRationale": "Reuse evidence, not a new safety claim. The risk is over-claiming 'realized' — guarded here by pointing at a concrete consuming file + a runtime check, and by keeping the gen-ui package itself listed as unproven (a local adapter stands in for the unresolvable @cloudflare/gen-ui).",
+  "observed": {
+    "outcome": {
+      "status": "verified",
+      "constraints": [
+        {
+          "id": "gate-consumed-unchanged",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "app/worker/index.ts imports { gate } from the package entry (../../src/index.js) and calls it directly — no fork, no copy. The hammer is reused, not reimplemented."
+        },
+        {
+          "id": "edge-runtime-verdict",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "A runtime check posted a planted-leak GateInput to the Worker handler: status 200, verdict 'leak', 1 violation, and JSON.stringify(body).includes('alice.planted') === false (no raw secret crossed the wire)."
+        },
+        {
+          "id": "verdict-rendered-as-generative-ui",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "verdict-to-ui.ts maps the Verdict to gen-ui UI-JSON via the documented model-JSX -> UI-JSON contract; renderUI(catalog) renders it into the AX catalog. The leak/verdict output IS the generative UI."
+        },
+        {
+          "id": "dogfood-builds",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "cd app && bun run build -> tsc --noEmit clean + vite build: 37 modules, dist/ emitted (index 148.26 kB / gzip 47.89 kB)."
+        }
+      ]
+    },
+    "observations": [
+      {
+        "kind": "consumer",
+        "ok": true,
+        "detail": "app/worker/index.ts (Cloudflare Worker) is the second consumer of the gate beyond the test suite."
+      },
+      {
+        "kind": "adapter-caveat",
+        "ok": true,
+        "detail": "The gen-ui rendering uses a LOCAL adapter mirroring @cloudflare/gen-ui's documented contract, because the real package 404s from the registry (findings.md Feedback #1). Reuse of OUR gate is realized; consumption of the real gen-ui package remains unproven."
+      }
+    ],
+    "actions": [
+      {
+        "op": "build",
+        "ok": true,
+        "detail": "cd app && bun run build",
+        "result": "tsc clean; vite build 37 modules; dist/ with manifest/sw/offline/robots/sitemap present"
+      },
+      {
+        "op": "runtime-check",
+        "ok": true,
+        "detail": "Invoked worker.fetch() with a planted-leak POST body",
+        "result": "200 / verdict=leak / violations=1 / leaksRawSecret=false"
+      }
+    ],
+    "assertions": [
+      { "kind": "single-source-of-truth", "ok": true, "detail": "the dogfood runs the shipped gate, not a copy" },
+      { "kind": "redaction-safe-at-edge", "ok": true, "detail": "no raw secret in the Worker response" }
+    ],
+    "evidence": [
+      {
+        "kind": "package-entry",
+        "path": "src/index.ts",
+        "checksum": "sha256:5c60f237a4f3cef4478a51ba46ded6845047b9e4f3ac1af090f38da18e9143e4"
+      },
+      {
+        "kind": "consumer-worker",
+        "path": "app/worker/index.ts",
+        "checksum": "sha256:7cb2c710e4a49382f54891ccabcdc6d4cdba7d6f16e4d2ccff13f58d29c80ff8"
+      },
+      {
+        "kind": "genui-mapper",
+        "path": "app/src/verdict-to-ui.ts",
+        "checksum": "sha256:02092961e38c89da4d6bea44ae66efa3f6ee2adb8266fb4c72dfd7810e825ce9"
+      }
+    ],
+    "resources": {
+      "model": "claude-opus-4-8",
+      "tokens": null,
+      "moneyUsd": null,
+      "wallMinutes": null,
+      "attempts": 1,
+      "humanClarifications": 0
+    }
+  },
+  "projection": {
+    "valueHorizon": "weeks-to-months",
+    "mechanisms": [
+      "If the gate folds into My AX as a reusable pre-ship gate (beside gateproof/mergegate), this Worker is the reference integration.",
+      "A deterministic edge referee that ToolPrivacyBench-style evals can call before an LLM judge."
+    ],
+    "notes": "Context only. Not a score."
+  },
+  "realization": {
+    "links": [
+      {
+        "consumer": "app/worker/index.ts",
+        "consumes": "src/index.ts (gate)",
+        "kind": "second-artifact-reuse",
+        "note": "The gate primitive is reused unchanged by the dogfood Worker. NOT a separate notebook citing the schema yet, so this is partial realization (in-repo reuse), recorded honestly as such."
+      }
+    ]
+  }
+}

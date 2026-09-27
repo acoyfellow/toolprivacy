@@ -1,0 +1,16 @@
+{
+  // Cloudflare Worker config for the toolprivacy dogfood surface.
+  // NOT deployed in this notebook (no Jordan go). Describes the binding only:
+  // the Worker (worker/index.ts) runs the real gate on /api/gate and serves the
+  // Vite build (dist/) as static assets otherwise.
+  "name": "toolprivacy-dogfood",
+  "account_id": "bfcb6ac5b3ceaf42a09607f6f7925823",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-06-01",
+  "routes": [{ "pattern": "toolprivacy.coey.dev", "custom_domain": true }],
+  "workers_dev": false,
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  }
+}

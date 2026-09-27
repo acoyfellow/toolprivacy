@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>toolprivacy — purpose-bound privacy gate for tool-using LLM agents</title>
+    <meta
+      name="description"
+      content="A deterministic gate that catches purpose-bound privacy leaks in tool-using LLM agents before the response ships — rendered as generative UI (gen-ui pattern). AX."
+    />
+    <meta name="theme-color" content="#f6821f" />
+    <link rel="canonical" href="https://toolprivacy.coey.dev/" />
+    <meta name="robots" content="index,follow" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="toolprivacy — purpose-bound privacy gate" />
+    <meta
+      property="og:description"
+      content="Deterministic, pre-ship detection of purpose-bound privacy leaks in tool-using LLM agents. Verdicts rendered as generative UI."
+    />
+    <meta property="og:url" content="https://toolprivacy.coey.dev/" />
+    <meta property="og:image" content="https://toolprivacy.coey.dev/og.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="toolprivacy — purpose-bound privacy gate" />
+    <meta
+      name="twitter:description"
+      content="Deterministic, pre-ship detection of purpose-bound privacy leaks in tool-using LLM agents."
+    />
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23f6821f'/%3E%3Ctext x='32' y='42' font-family='sans-serif' font-size='28' font-weight='700' fill='white' text-anchor='middle'%3EAX%3C/text%3E%3C/svg%3E"
+    />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "toolprivacy",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Web",
+        "description": "A deterministic gate that catches purpose-bound privacy leaks in tool-using LLM agents before the response ships, rendered as generative UI.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "author": { "@type": "Organization", "name": "Cloudflare AX" }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>toolprivacy renders the gate's verdict as generative UI — enable JavaScript to view it.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

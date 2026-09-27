@@ -1,0 +1,167 @@
+{
+  "schema": "toolprivacy.receipt.v0.0.1",
+  "proofSpec": "proof-spec.v0",
+  "goodput": "goodput.receipt.v0.0.1",
+  "cohort": "agent-privacy/purpose-bound-leak-gate",
+  "intent": "Grok critique E4 (no before/after trace): produce ONE strong, concrete before/after trace where a PRESENCE-ONLY baseline checker PASSES/flags a leak the same as a benign in-purpose use (it is purpose-blind, so it false-positives the benign use), while toolprivacy's purpose-binding gate DISTINGUISHES them. Two scenarios that differ ONLY in purpose are run through BOTH checkers; the contrast is the proof. Also (E3): ship a real drop-in integration (guardReply) so a builder can wire the gate in minutes.",
+  "risk": "high",
+  "riskRationale": "The artifact is a security boundary. The claim under test — that purpose-binding adds discriminating power a naive presence scan lacks — is the central thesis of the project. A false 'win' here would overstate the gate's value, so it is graded high risk.",
+  "observed": {
+    "outcome": {
+      "status": "verified",
+      "constraints": [
+        {
+          "id": "presence-baseline-flags-benign-in-purpose-use",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "presenceCheck() on the BENIGN scenario (invite email used IN the send_calendar_invite tool call) returns flagged:true — a FALSE POSITIVE. The baseline sees only literal presence and has no purpose model."
+        },
+        {
+          "id": "presence-baseline-cannot-distinguish-benign-from-leak",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "presenceCheck().flagged is IDENTICAL (true) for the benign in-purpose use and the out-of-purpose leak. The baseline cannot tell them apart."
+        },
+        {
+          "id": "purpose-gate-distinguishes-benign-from-leak",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "gate() returns 'pass' for the benign in-purpose use and 'leak' (reason purpose_mismatch) for the out-of-purpose leak. The verdicts DIFFER exactly where the baseline's were identical — purpose-binding is the load-bearing discriminator."
+        },
+        {
+          "id": "guardReply-drop-in-blocks-leak-allows-benign",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "E3 drop-in: guardReply({toolResults, draftReply, sinkPurpose}) builds the GateInput and returns {allow, verdict}. A leak draft -> allow:false; a benign/in-purpose draft -> allow:true. allow is fail-closed (true only on a definitive 'pass'). Demonstrated end-to-end in examples/loop-integration.ts (catches an accidental email mention in a chatty reply)."
+        },
+        {
+          "id": "checkers-own-output-is-redaction-safe",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "Both presenceCheck and gate emit only structural metadata (sinkId, fieldPath, privateClass, purposes, reason) — no raw value, no value-derived token. This receipt likewise stores no raw secret (the fixture email is a synthetic *.invalid address used only to make the trace concrete)."
+        },
+        {
+          "id": "all-existing-tests-stay-green",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "Full suite after adding guard + presence-baseline + before/after trace: 34 pass / 0 fail / 179 expect() calls across 3 files. The original 16 gate tests are unchanged and green. tsc --noEmit clean."
+        }
+      ]
+    },
+    "observations": [
+      {
+        "kind": "scenario-pair",
+        "ok": true,
+        "detail": "Two GateInputs differ ONLY in sink purpose: (A) email in a send_calendar_invite tool_call; (B) same email in a general_summary user_message. Same tracked value, same detector, same literal presence."
+      },
+      {
+        "kind": "baseline-blindspot",
+        "ok": true,
+        "detail": "presenceCheck flags A and B identically (flagged:true). Presence-without-purpose either false-positives legitimate use or, equivalently, cannot separate it from a leak."
+      }
+    ],
+    "actions": [
+      {
+        "op": "run",
+        "ok": true,
+        "detail": "bun test (full suite incl. test/presence-vs-purpose.test.ts and test/guard.test.ts)",
+        "result": "34 pass / 0 fail / 179 expect() calls across 3 files"
+      },
+      {
+        "op": "run",
+        "ok": true,
+        "detail": "bun run examples/loop-integration.ts — the copy-paste drop-in catches an accidental email mention in a draft reply",
+        "result": "[guard] BLOCKED — verdict.verdict=leak, reason=purpose_mismatch"
+      },
+      {
+        "op": "typecheck",
+        "ok": true,
+        "detail": "tsc --noEmit",
+        "result": "clean"
+      }
+    ],
+    "assertions": [
+      { "kind": "presence-identical-across-benign-and-leak", "ok": true, "detail": "flagged(A)=true == flagged(B)=true" },
+      { "kind": "gate-differs-across-benign-and-leak", "ok": true, "detail": "verdict(A)=pass != verdict(B)=leak" },
+      { "kind": "drop-in-allow-semantics", "ok": true, "detail": "guardReply leak->allow:false, benign/in-purpose->allow:true, fail-closed on inconclusive" },
+      { "kind": "no-raw-secret-in-any-output", "ok": true, "detail": "presence hits + gate violations + this receipt carry only structural metadata" }
+    ],
+    "evidence": [
+      {
+        "kind": "drop-in-source",
+        "path": "src/guard.ts",
+        "checksum": "sha256:60cfdf70f920ea98b75aebc0cbcd0a17e7649f6d41927b7adc69fcd260b24145",
+        "note": "guardReply({toolResults, draftReply, sinkPurpose}) -> {allow, verdict}. Thin wrapper over gate(); allow is fail-closed."
+      },
+      {
+        "kind": "integration-example",
+        "path": "examples/loop-integration.ts",
+        "checksum": "sha256:b3aa1f4a16d1452c3535d3865ef8529b8b8d9fd8e65636e9d580e123f5e7de01",
+        "note": "Copy-paste pattern: generate draft; const {allow,verdict}=guardReply(...); if(!allow) blockOrRedact(verdict); else send(draft)."
+      },
+      {
+        "kind": "baseline-source",
+        "path": "src/presence-baseline.ts",
+        "checksum": "sha256:8892f0dd320a6656ad0a2c99fe7a68f6f11e2bd2c2e8ee149db11056d36900a0",
+        "note": "presenceCheck(): purpose-blind literal-presence flagger, reusing the gate's detectors for an apples-to-apples comparison."
+      },
+      {
+        "kind": "before-after-trace",
+        "path": "test/presence-vs-purpose.test.ts",
+        "checksum": "sha256:766660a4aee06c7759da8345670a13845fe08f4c332714f552389bf90d2a3d45",
+        "command": "bun test test/presence-vs-purpose.test.ts"
+      },
+      {
+        "kind": "drop-in-test",
+        "path": "test/guard.test.ts",
+        "checksum": "sha256:628a221f865be67bf433f7150c80afcc91302875eb545349578cc1e13f0525b8",
+        "command": "bun test test/guard.test.ts"
+      },
+      {
+        "kind": "trace-sample",
+        "note": "Real checker outputs, redaction-safe. Scenarios differ ONLY in purpose.",
+        "value": {
+          "scenarioA_benign_in_purpose": {
+            "description": "invite email used IN the send_calendar_invite tool_call",
+            "presence_baseline": { "flagged": true, "hits": 1 },
+            "purpose_gate": { "verdict": "pass", "violations": 0 }
+          },
+          "scenarioB_out_of_purpose_leak": {
+            "description": "same email pasted into a general_summary user_message",
+            "presence_baseline": { "flagged": true, "hits": 1 },
+            "purpose_gate": {
+              "verdict": "leak",
+              "violation": {
+                "fieldPath": "getContact.email",
+                "privateClass": "email_address",
+                "boundPurpose": "send_calendar_invite",
+                "observedPurpose": "general_summary",
+                "reason": "purpose_mismatch"
+              }
+            }
+          },
+          "contrast": "presence_baseline.flagged is IDENTICAL (true,true); purpose_gate.verdict DIFFERS (pass,leak). Purpose-binding is the discriminator."
+        }
+      }
+    ],
+    "resources": {
+      "model": "claude-opus-4-8",
+      "tokens": null,
+      "moneyUsd": null,
+      "wallMinutes": null,
+      "attempts": 1,
+      "humanClarifications": 0
+    }
+  },
+  "projection": {
+    "valueHorizon": "immediate",
+    "mechanisms": [
+      "Answers Grok E3 (integration path invisible): guardReply is a literal one-call drop-in a builder wires in minutes, right before send().",
+      "Answers Grok E4 (no before/after trace): a concrete, tested trace shows a presence-only baseline false-positives the benign in-purpose use and cannot separate it from a leak, while purpose-binding returns pass vs leak. The added value is now demonstrated, not asserted."
+    ],
+    "notes": "Context only. Not a score. The presence baseline is intentionally naive; the point is to make the contrast concrete and reproducible (bun test). The gate remains proven on hand-built GateInput fixtures, not yet on a live agent wire (see status.json unproven[])."
+  },
+  "realization": {
+    "links": []
+  }
+}

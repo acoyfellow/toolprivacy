@@ -1,0 +1,89 @@
+{
+  "schema": "toolprivacy.receipt.v0.0.1",
+  "proofSpec": "proof-spec.v0",
+  "goodput": "goodput.receipt.v0.0.1",
+  "cohort": "agent-privacy/capability-extension",
+  "intent": "E6 Part A (the audacious extension): extend the gate so an outbound sink's content can be a STRUCTURED object/JSON (not just a string), walk nested object/array string leaves, and report ALL leaked private atoms in one response (one violation per leaked atom), not just the first — while keeping the gate DETERMINISTIC, NON-REVERSIBLE, and all existing tests green.",
+  "risk": "high",
+  "riskRationale": "A core-engine extension, not a leaf experiment. Widening the input contract (sink.content: string | object) and changing the scan to recurse risks back-compat breakage and could weaken the safety invariant if a structured value bled into the verdict. Audacious because it claims a real capability gain on the load-bearing primitive.",
+  "observed": {
+    "outcome": {
+      "status": "verified-proved",
+      "constraints": [
+        {
+          "id": "structured-content-accepted",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "sink.content type widened to `SinkContent = string | number | boolean | null | SinkContent[] | { [k]: SinkContent }` (i.e. string | structured JSON). The gate walks every nested string leaf via collectStringLeaves (depth-first, insertion/index order), scanning each leaf independently so adjacent fields cannot be falsely reassembled. tsc --noEmit passes."
+        },
+        {
+          "id": "multi-atom-all-violations-reported",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "MEASURED: a single JSON outbound (general_summary) containing two distinct out-of-purpose atoms — an email nested in an array element and a phone nested in a sub-object, both bound to send_calendar_invite — yields EXACTLY 2 violations, classes ['email_address','phone_number'], paths ['getContact.email','getContact.phone'], each reason 'purpose_mismatch'. Not just the first atom."
+        },
+        {
+          "id": "in-purpose-structured-passes",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "MEASURED: the same two atoms placed inside a nested send_calendar_invite payload (the invite) yield verdict 'pass', 0 violations, trackedFields 2. Purpose-binding still separates benign in-purpose use from leak, in structured form."
+        },
+        {
+          "id": "deterministic-on-structured",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "MEASURED: structured-content verdict is byte-identical across 50 runs. Leaf walk order is fixed (object keys insertion order, arrays by index)."
+        },
+        {
+          "id": "safety-invariant-holds-on-structured",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "MEASURED: for a structured leak the serialized verdict contains neither raw atom (email, phone), nor 'alice.planted', nor the digit-normalized phone '5550101234', nor '010-1234'. The verdict remains structural-only; nothing value-derived enters it. appearsInContent returns only a boolean."
+        },
+        {
+          "id": "back-compat-string-path-preserved",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "MEASURED: all 16 pre-existing gate tests stay green. A stringified-JSON payload with two atoms yields the same 2-violation result as the structured object, proving the string path is unchanged. Non-string leaves (number/boolean/null) are never scanned — a numeric 4111111111111111 in a structured payload is NOT tracked/flagged."
+        }
+      ]
+    },
+    "observations": [
+      { "kind": "type-change", "ok": true, "detail": "src/types.ts: added recursive SinkContent type; OutboundSink.content: string -> SinkContent (string | structured JSON). Back-compat: string is a member of the union." },
+      { "kind": "engine-change", "ok": true, "detail": "src/gate.ts: added collectStringLeaves (recursive walk) + appearsInContent (any-leaf substring match). Main scan loop now calls appearsInContent; still pushes one violation per (sink, tracked) hit -> all atoms reported." },
+      { "kind": "baseline-fix", "ok": true, "detail": "src/presence-baseline.ts (E4 strawman): added contentToString to flatten structured content for the purpose-blind presence check; keeps E4 comparison compiling under the widened type." }
+    ],
+    "actions": [
+      { "op": "test", "ok": true, "detail": "bun test", "result": "34 pass / 0 fail / 179 expect() calls across 3 files (16 original gate + 6 new E6 Part A + E4 presence suite). Was 16 pass before; existing 16 remain green." },
+      { "op": "typecheck", "ok": true, "detail": "tsc --noEmit", "result": "clean (0 errors) after widening the type and fixing the E4 baseline." },
+      { "op": "format", "ok": true, "detail": "biome check on touched files (gate.ts, types.ts, presence-baseline.ts, gate.test.ts)", "result": "no fixes needed after format. (Pre-existing biome nits in status.json/index.ts/presence-vs-purpose.test.ts are out of scope and untouched.)" }
+    ],
+    "assertions": [
+      { "kind": "two-atoms-two-violations", "ok": true, "detail": "structured JSON with 2 out-of-purpose atoms -> exactly 2 violations (measured)" },
+      { "kind": "in-purpose-structured-pass", "ok": true, "detail": "structured JSON with only in-purpose atoms -> pass, 0 violations (measured)" },
+      { "kind": "deterministic-non-reversible-preserved", "ok": true, "detail": "byte-identical over 50 runs; verdict carries no raw/derived value for structured content too (measured)" }
+    ],
+    "evidence": [
+      { "kind": "engine-source", "path": "src/gate.ts", "checksum": "sha256:1c8ae99f7783ac011a5fbbca7ec9fd2a55d4e2afe0457d4f90f30f0c3223e930", "note": "collectStringLeaves + appearsInContent; main loop reports all atoms." },
+      { "kind": "type-source", "path": "src/types.ts", "checksum": "sha256:eaf2d1d739ed0fffee5135f22ea8c5bfc684298c5ed02e95fa8e72a2a886801f", "note": "recursive SinkContent union; content: string | structured JSON." },
+      { "kind": "tests", "path": "test/gate.test.ts", "checksum": "sha256:e5c8019b7d84680d3d9255206f0e62528a7b50ec8f419392c93a643ee5b57872", "note": "describe('E6 Part A: structured/JSON content + multi-atom reporting') — 6 tests; existing 16 unchanged." }
+    ],
+    "resources": {
+      "model": "claude-opus-4-8",
+      "tokens": null,
+      "moneyUsd": null,
+      "wallMinutes": null,
+      "attempts": 1,
+      "humanClarifications": 0
+    }
+  },
+  "projection": {
+    "valueHorizon": "immediate",
+    "mechanisms": [
+      "Lets the gate guard real tool-call argument objects / structured responses where private atoms hide in nested fields, not just flat strings.",
+      "Reports every leaked atom in one pass, so a multi-PII response surfaces all violations at once instead of one-at-a-time."
+    ],
+    "notes": "Context only, not a score. Recall on encoding/paraphrase remains the documented known gap (unchanged by this work); this extension is about structure + multiplicity, not canonicalization."
+  },
+  "realization": { "links": [] }
+}

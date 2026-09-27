@@ -1,0 +1,104 @@
+{
+  "schema": "toolprivacy.receipt.v0.0.1",
+  "proofSpec": "proof-spec.v0",
+  "goodput": "goodput.receipt.v0.0.1",
+  "goodputKind": "docs-artifact",
+  "cohort": "agent-privacy/purpose-bound-leak-gate",
+  "experiment": "E5",
+  "intent": "Grok critique E5: the threat model was unstated. Write it down explicitly and honestly — name the primary scenario, state the trust assumption, and name (not hide) what is out of current scope. This is a DOCS-only artifact: no code, no gate behavior, no policy change.",
+  "risk": "low",
+  "riskRationale": "Documentation only. No code or gate/policy change, so no behavior to verify beyond 'tests still green'. The risk is over-claiming scope in prose; guarded by naming out-of-scope adversaries explicitly as known limits / future work rather than implying coverage.",
+  "observed": {
+    "outcome": {
+      "status": "verified",
+      "constraints": [
+        {
+          "id": "primary-scenario-stated",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "Primary adversary/scenario stated plainly: ACCIDENTAL purpose-bound leakage in a benign agent — it fetched data for task A and then helpfully included it in unrelated output B. No malice assumed."
+        },
+        {
+          "id": "out-of-scope-named-not-hidden",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "Explicitly out of current scope and named: (1) a prompt-injection adversary actively trying to exfiltrate, (2) a malicious tool that lies about declared purpose, (3) semantic/paraphrased leaks where the agent restates the secret in different words. Written as known limits / future work."
+        },
+        {
+          "id": "trust-assumption-stated",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "Trust assumption stated: the gate sees the tool results + the drafted outbound and trusts the declared purpose labels. It does not verify a declared purpose is honest and does not infer intent."
+        },
+        {
+          "id": "human-first-voice",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "Prose contains no '->' arrows; voice matches the human-first site standard. Short, grounded section in README.md plus full docs/threat-model.md."
+        },
+        {
+          "id": "tests-still-green",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "bun test = 16 pass / 0 fail (83 expect() calls). Docs-only change touched no code; suite unchanged."
+        },
+        {
+          "id": "no-code-or-gate-change",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "Only README.md (new Threat model section), docs/threat-model.md (new), and this receipt changed. src/ and test/ untouched; no gate or policy edit."
+        }
+      ]
+    },
+    "observations": [
+      {
+        "kind": "artifact",
+        "ok": true,
+        "detail": "docs/threat-model.md is the canonical statement; README.md carries a short pointer-and-summary version for the first read."
+      },
+      {
+        "kind": "honesty",
+        "ok": true,
+        "detail": "Out-of-scope adversaries are named in the open, and the trust-in-labels assumption is stated as a limit, not spun as a feature."
+      }
+    ],
+    "actions": [
+      {
+        "op": "write-docs",
+        "ok": true,
+        "detail": "Added docs/threat-model.md and a Threat model section to README.md",
+        "result": "primary scenario + trust assumption + named out-of-scope items"
+      },
+      {
+        "op": "test",
+        "ok": true,
+        "detail": "bun test",
+        "result": "16 pass / 0 fail"
+      }
+    ],
+    "assertions": [
+      { "kind": "scope-honest", "ok": true, "detail": "the claim is bounded to accidental leakage in a benign agent with trusted labels" },
+      { "kind": "docs-only", "ok": true, "detail": "no behavior change; gate output and tests unchanged" }
+    ],
+    "evidence": [
+      { "kind": "threat-model-doc", "path": "docs/threat-model.md" },
+      { "kind": "readme-section", "path": "README.md" }
+    ],
+    "resources": {
+      "model": "claude-opus-4-8",
+      "tokens": null,
+      "moneyUsd": null,
+      "wallMinutes": null,
+      "attempts": 1,
+      "humanClarifications": 0
+    }
+  },
+  "projection": {
+    "valueHorizon": "immediate",
+    "mechanisms": [
+      "A stated threat model lets a reader judge fit in seconds and stops the gate from being mistaken for an anti-exfiltration or anti-injection control.",
+      "The named out-of-scope items (injection, malicious tool, paraphrase) are the explicit backlog for later iterations."
+    ],
+    "notes": "Context only. Not a score."
+  }
+}

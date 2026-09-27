@@ -1,0 +1,30 @@
+{
+  "name": "toolprivacy",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "A deterministic gate that catches purpose-bound privacy leaks in tool-using LLM agents before the response ships.",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "bun test",
+    "eval": "bun eval/run.ts",
+    "typecheck": "tsc --noEmit",
+    "check": "biome check .",
+    "format": "biome format --write ."
+  },
+  "keywords": [
+    "tool-privacy",
+    "purpose-bound",
+    "privacy-leak",
+    "llm-agents",
+    "deterministic-gate",
+    "proof-spec"
+  ],
+  "author": "Jordan Coeyman <jcoeyman@cloudflare.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.1",
+    "bun-types": "^1.3.14",
+    "typescript": "^6.0.3"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "schema": "toolprivacy.receipt.v0.0.1",
+  "proofSpec": "proof-spec.v0",
+  "goodput": "goodput.receipt.v0.0.1",
+  "cohort": "agent-privacy/baseline-comparison",
+  "intent": "E6 Part B: state honestly how a 'just ask an LLM judge on the final output' baseline differs from toolprivacy's deterministic, non-leaking, zero-model gate — as a clear property comparison (determinism, leak-safety of the checker itself, latency, cost, coverage, auditability, failure mode), with the tradeoff stated plainly.",
+  "risk": "low",
+  "riskRationale": "A framing/comparison artifact. Its value is preventing dishonest spin: it forces the project to admit where the LLM judge likely wins (paraphrase recall) while making explicit why toolprivacy is the reliable baseline (never lies, never leaks). No model was called; recall claims are explicitly PROJECTED, not measured.",
+  "observed": {
+    "outcome": {
+      "status": "verified-known-gap",
+      "constraints": [
+        {
+          "id": "comparison-table-stated",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "A property table comparing the two checkers across determinism, leak-safety-of-the-checker, latency, cost, purpose-binding, coverage (literal vs paraphrase), false-positive behavior, auditability, and failure mode was written to experiments/llm-judge-baseline/README.md."
+        },
+        {
+          "id": "tradeoff-stated-honestly",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "Stated plainly: the LLM judge LIKELY has higher paraphrase/encoding recall but is non-deterministic, adds latency + cost, and can itself echo/leak the secret in its reasoning. toolprivacy is the reliable baseline that never lies (deterministic, inspectable) and never leaks (verdict has no secret-derived bits). Concluded complementary, not interchangeable."
+        },
+        {
+          "id": "no-projection-as-achievement",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "All claims about the LLM judge (recall, latency, cost, leak behavior) are explicitly labeled PROJECTED — no model was called. toolprivacy's own properties referenced as MEASURED are backed by the bun test suite (determinism over 50 runs, non-reversibility, literal/digit-normalized recall, Luhn false-positive control, documented known gaps)."
+        }
+      ]
+    },
+    "propertyComparison": {
+      "determinism": { "llmJudge": "non-deterministic (no byte-identical guarantee)", "toolprivacy": "deterministic, byte-identical (MEASURED, 50 runs)" },
+      "checkerLeakSafety": { "llmJudge": "can echo/leak the secret in its reasoning; checker becomes an exfil surface (PROJECTED)", "toolprivacy": "verdict carries no raw value and no value-derived token; provably non-reversible (MEASURED)" },
+      "latency": { "llmJudge": "model round-trip, tens-to-thousands of ms, variable tail (PROJECTED)", "toolprivacy": "microseconds, pure in-process fn (MEASURED: no I/O)" },
+      "cost": { "llmJudge": "per-call token cost, scales with transcript/frequency (PROJECTED)", "toolprivacy": "zero marginal cost, no tokens (structural fact)" },
+      "purposeBinding": { "llmJudge": "none intrinsic; cannot separate in-purpose use from leak without prompt engineering, still non-deterministically (PROJECTED)", "toolprivacy": "first-class via PURPOSE_COMPATIBILITY (MEASURED: benign vs leak share identical presence, separated only by purpose)" },
+      "coverageLiteralDigitNormalized": { "llmJudge": "high (PROJECTED)", "toolprivacy": "high (MEASURED)" },
+      "coverageParaphraseEncodingSplit": { "llmJudge": "likely HIGHER recall (PROJECTED)", "toolprivacy": "documented known gap -> pass (MEASURED in KNOWN-GAPS tests)" },
+      "falsePositiveBehavior": { "llmJudge": "variable; can hallucinate or miss (PROJECTED)", "toolprivacy": "deterministic + inspectable; Luhn suppresses order-ID-as-PAN (MEASURED)" },
+      "auditability": { "llmJudge": "prose verdict, unstable, hard to diff/regression-test (PROJECTED)", "toolprivacy": "closed-set label + structured violations; diffable, regression-tested, safe to log (MEASURED)" },
+      "failureMode": { "llmJudge": "fails open/noisy; a wrong or jailbroken judge passes a real leak or leaks in its explanation (PROJECTED)", "toolprivacy": "fails closed; unknown purpose -> flag, no outbound -> inconclusive (MEASURED)" }
+    },
+    "observations": [
+      { "kind": "comparison-doc", "ok": true, "detail": "experiments/llm-judge-baseline/README.md holds the full prose + table + measured-vs-projected split." },
+      { "kind": "no-model-called", "ok": true, "detail": "This is conceptual by design; turning the PROJECTED LLM-judge numbers into MEASURED ones needs a real model harness + labeled corpus (a named future iteration)." }
+    ],
+    "actions": [
+      { "op": "write", "ok": true, "detail": "authored experiments/llm-judge-baseline/README.md (property table + plain tradeoff)" },
+      { "op": "label", "ok": true, "detail": "every LLM-judge coverage/latency/cost/leak claim marked PROJECTED; toolprivacy claims cross-referenced to the measured bun test suite" }
+    ],
+    "assertions": [
+      { "kind": "llm-judge-likely-higher-paraphrase-recall", "ok": true, "detail": "stated as a real advantage of the baseline, PROJECTED not measured" },
+      { "kind": "toolprivacy-never-lies-never-leaks", "ok": true, "detail": "deterministic + non-reversible verdict, MEASURED" },
+      { "kind": "complementary-not-interchangeable", "ok": true, "detail": "honest conclusion: deterministic gate as always-on floor, optional sandboxed LLM judge for recall" }
+    ],
+    "evidence": [
+      { "kind": "comparison-doc", "path": "experiments/llm-judge-baseline/README.md", "checksum": "sha256:7ae3fc97670fa60a3b6eefa186763d9d5695cf8d4232d5fc16d33d2ee4205217", "note": "property table + plainly-stated tradeoff; measured-vs-projected explicitly separated." },
+      { "kind": "measured-backing", "path": "test/gate.test.ts", "checksum": "sha256:e5c8019b7d84680d3d9255206f0e62528a7b50ec8f419392c93a643ee5b57872", "note": "toolprivacy's determinism / non-reversibility / recall / known-gap claims are backed here (34 pass)." }
+    ],
+    "resources": {
+      "model": "claude-opus-4-8",
+      "tokens": null,
+      "moneyUsd": null,
+      "wallMinutes": null,
+      "attempts": 1,
+      "humanClarifications": 0
+    }
+  },
+  "projection": {
+    "valueHorizon": "immediate",
+    "mechanisms": [
+      "Lets the project state recall-vs-baseline honestly instead of pretending toolprivacy is strictly best.",
+      "Frames toolprivacy as the reliable, non-leaking floor and the LLM judge as an optional, sandboxed recall layer — a defensible deployment story."
+    ],
+    "notes": "Context only, not a score. Coverage claims for the LLM judge are PROJECTED; only toolprivacy's referenced properties are MEASURED. A verified-known-gap result is a first-class artifact per MY_REPO_SHAPE."
+  },
+  "realization": { "links": [] }
+}

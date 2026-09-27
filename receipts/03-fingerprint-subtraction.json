@@ -1,0 +1,102 @@
+{
+  "schema": "toolprivacy.receipt.v0.0.1",
+  "proofSpec": "proof-spec.v0",
+  "goodput": "goodput.receipt.v0.0.1",
+  "goodputKind": "subtraction",
+  "cohort": "agent-privacy/leak-guard-self-safety",
+  "intent": "Record the value produced by SUBTRACTION: removing the value-derived fingerprint from the gate's output. The deletion is the improvement — a whole reversible-token attack surface (and the code that produced it) was removed, making the gate both safer and simpler. Goodput counts deletions as first-class outcomes.",
+  "risk": "high",
+  "riskRationale": "Removing the fingerprint changes the gate's safety surface. Subtracting a reversible token from a security boundary is a high-value, high-care deletion: it eliminates a second leak channel (see receipts/05).",
+  "observed": {
+    "outcome": {
+      "status": "verified",
+      "constraints": [
+        {
+          "id": "fingerprint-function-deleted",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "The fnv1a fingerprint() function (~11 lines) was removed from src/gate.ts; no value-derived token is computed anywhere in the gate path."
+        },
+        {
+          "id": "fingerprint-field-deleted-from-contract",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "The `fingerprint: string` field was removed from the Violation type (src/types.ts). The output contract is strictly smaller and carries no secret-derived bits."
+        },
+        {
+          "id": "deletion-keeps-suite-green",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "After the subtraction, bun test = 16 pass / 0 fail. The gate still catches the in-scope leak and still never echoes the secret — the removed token was pure liability, not capability."
+        },
+        {
+          "id": "attack-surface-subtracted",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "The brute-force reversal demonstrated in receipts/05 is no longer possible against the verdict: there is nothing left to invert. The deletion closed the channel."
+        }
+      ]
+    },
+    "observations": [
+      {
+        "kind": "diff-removed",
+        "ok": true,
+        "detail": "Removed: fingerprint() helper, its import usage, the Violation.fingerprint field, and the README/status claims describing a 'non-reversible fingerprint'."
+      },
+      {
+        "kind": "diff-net",
+        "ok": true,
+        "detail": "Net change is a SMALLER public contract: Violation went from 8 fields to 7 (dataClass renamed to privateClass; fingerprint dropped)."
+      }
+    ],
+    "actions": [
+      {
+        "op": "delete-and-run",
+        "ok": true,
+        "detail": "Deleted fingerprint surface; re-ran suite + typecheck + biome.",
+        "result": "16 pass / 0 fail; tsc clean; biome clean"
+      }
+    ],
+    "assertions": [
+      { "kind": "no-value-derived-token", "ok": true, "detail": "verdict is structural-only after the deletion" },
+      { "kind": "capability-preserved", "ok": true, "detail": "leak detection + safety invariant unchanged" }
+    ],
+    "evidence": [
+      {
+        "kind": "primitive-source",
+        "path": "src/gate.ts",
+        "checksum": "sha256:9be3396d8d0ac57f031ee5c774bd98a9756cdbaa96ab1ef838c3313100b2d946",
+        "note": "fingerprint() absent."
+      },
+      {
+        "kind": "contract-source",
+        "path": "src/types.ts",
+        "note": "Violation.fingerprint field removed; privateClass retained."
+      },
+      {
+        "kind": "negative-result-link",
+        "path": "receipts/05-fingerprint-reversible.json",
+        "note": "The disproof that motivated the subtraction."
+      }
+    ],
+    "resources": {
+      "model": "claude-opus-4-8",
+      "tokens": null,
+      "moneyUsd": null,
+      "wallMinutes": null,
+      "attempts": 1,
+      "humanClarifications": 0
+    }
+  },
+  "projection": {
+    "valueHorizon": "immediate",
+    "mechanisms": [
+      "Codifies a reusable rule for the portfolio's gates: a leak-guard must subtract any value-derived token, not just the raw value.",
+      "A smaller output contract is cheaper for downstream consumers (gateproof/mergegate/My AX) to depend on."
+    ],
+    "notes": "Context only. Not a score. Subtraction is a first-class goodput outcome per MY_REPO_SHAPE."
+  },
+  "realization": {
+    "links": []
+  }
+}

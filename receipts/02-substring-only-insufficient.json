@@ -1,0 +1,95 @@
+{
+  "schema": "toolprivacy.receipt.v0.0.1",
+  "proofSpec": "proof-spec.v0",
+  "goodput": "goodput.receipt.v0.0.1",
+  "cohort": "agent-privacy/detection-design",
+  "intent": "Determine whether substring-presence-only detection (flag any outbound occurrence of a fetched private value) is sufficient to catch purpose-bound leaks. Hypothesis: presence alone is enough.",
+  "risk": "medium",
+  "riskRationale": "A design negative result. Cheap to run; its value is preventing a wrong, weaker gate design from being built and trusted.",
+  "observed": {
+    "outcome": {
+      "status": "verified-disproved",
+      "constraints": [
+        {
+          "id": "presence-only-distinguishes-leak-from-benign",
+          "result": "fail",
+          "definedBeforeRun": true,
+          "detail": "DISPROVED. The benign in-purpose use and the leak contain byte-identical occurrences of the same email. Under presence-only logic both are flagged (or neither is); the two cases are indistinguishable without comparing declared purpose to sink purpose."
+        },
+        {
+          "id": "purpose-binding-is-load-bearing",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "Re-running the suite with the purpose-mismatch branch disabled (presence-only behavior) turns the benign-vs-leak separation off: the planted-leak test goes RED. Only PURPOSE_COMPATIBILITY restores correct separation."
+        }
+      ]
+    },
+    "observations": [
+      {
+        "kind": "case-benign",
+        "ok": true,
+        "detail": "email fetched for send_calendar_invite, placed INTO the send_calendar_invite tool call. Value present in outbound."
+      },
+      {
+        "kind": "case-leak",
+        "ok": true,
+        "detail": "same email present in a general_summary user_message. Value present in outbound — identical presence signal to the benign case."
+      }
+    ],
+    "actions": [
+      {
+        "op": "compare",
+        "ok": true,
+        "detail": "Both cases satisfy 'value appears in an outbound sink'. The ONLY differing field is sink.purpose (send_calendar_invite vs general_summary)."
+      },
+      {
+        "op": "mutate-and-run",
+        "ok": true,
+        "detail": "Disabled the purpose-mismatch branch in gate.ts (reduces gate to presence-only)",
+        "result": "north-star planted-leak test fails (verdict 'pass' instead of 'leak') — presence-only cannot catch the leak without also flagging the benign use"
+      }
+    ],
+    "assertions": [
+      { "kind": "indistinguishable-under-presence-only", "ok": true, "detail": "benign and leak share identical value-presence; differ only by purpose" },
+      { "kind": "purpose-binding-required", "ok": true, "detail": "bound-purpose vs sink-purpose comparison is the sole separating signal" }
+    ],
+    "evidence": [
+      {
+        "kind": "negative-result",
+        "path": "findings.md#nr-1",
+        "note": "Recorded so the weaker design is not re-attempted."
+      },
+      {
+        "kind": "mechanical-toggle",
+        "path": "src/gate.ts",
+        "checksum": "sha256:9be3396d8d0ac57f031ee5c774bd98a9756cdbaa96ab1ef838c3313100b2d946",
+        "note": "Disabling the `allowed.includes(sink.purpose)` branch reproduces presence-only behavior and turns the planted-leak tests RED; restoring returns 16/16 GREEN."
+      },
+      {
+        "kind": "policy-source",
+        "path": "src/policy.ts",
+        "checksum": "sha256:794689f67995cc075ea9010e7869da6ac9a5d91ecdea1b41554e71bc7c8b9150",
+        "note": "PURPOSE_COMPATIBILITY is the encoded fix for the disproved hypothesis."
+      }
+    ],
+    "resources": {
+      "model": "claude-opus-4-8",
+      "tokens": null,
+      "moneyUsd": null,
+      "wallMinutes": null,
+      "attempts": 1,
+      "humanClarifications": 0
+    }
+  },
+  "projection": {
+    "valueHorizon": "immediate",
+    "mechanisms": [
+      "Prevents building a presence-only redactor that would either miss leaks or destroy benign in-purpose use.",
+      "Justifies the load-bearing role of PURPOSE_COMPATIBILITY in policy.ts for any downstream consumer of the gate."
+    ],
+    "notes": "Context only. Not a score. A verified-disproved result is a first-class artifact per MY_REPO_SHAPE."
+  },
+  "realization": {
+    "links": []
+  }
+}

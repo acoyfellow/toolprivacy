@@ -1,0 +1,142 @@
+{
+  "schema": "toolprivacy.receipt.v0.0.1",
+  "proofSpec": "proof-spec.v0",
+  "goodput": "goodput.receipt.v0.0.1",
+  "cohort": "agent-privacy/purpose-bound-leak-gate",
+  "intent": "Prove that a planted purpose-bound secret (email fetched for send_calendar_invite, leaked into an unrelated general_summary) is CAUGHT by the deterministic gate before the response ships, that a benign in-purpose use PASSES, and that the gate's own output never re-leaks the secret.",
+  "risk": "high",
+  "riskRationale": "The artifact is a security boundary (a privacy gate). A weak gate that produces confident receipts is worse than no gate, so this is graded as high risk per MY_REPO_SHAPE.",
+  "observed": {
+    "outcome": {
+      "status": "verified",
+      "constraints": [
+        {
+          "id": "planted-leak-caught",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "gate() returns verdict 'leak' with one purpose_mismatch violation on getContact.email."
+        },
+        {
+          "id": "benign-in-purpose-passes",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "Same email used IN the send_calendar_invite tool call yields verdict 'pass', zero violations."
+        },
+        {
+          "id": "verdict-never-echoes-secret-or-token",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "JSON.stringify(verdict) contains neither the raw email nor the fragment 'alice.planted', and NO value-derived token (no fingerprint/hash). Verdict is structural-only -> provably non-reversible (R2 fix)."
+        },
+        {
+          "id": "red-before-green-mechanical",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "Disabling the purpose-mismatch branch in gate.ts turns the planted-leak tests RED; restoring it returns 16/16 GREEN."
+        },
+        {
+          "id": "determinism-50x",
+          "result": "pass",
+          "definedBeforeRun": true,
+          "detail": "50 repeated gate() calls over the same input produce byte-identical serialized verdicts."
+        }
+      ]
+    },
+    "observations": [
+      {
+        "kind": "tool-result",
+        "ok": true,
+        "detail": "getContact returned field 'email' under declaredPurpose 'send_calendar_invite'; classified as email_address and tracked."
+      },
+      {
+        "kind": "outbound-sink",
+        "ok": true,
+        "detail": "user_message sink with purpose 'general_summary' contains the tracked email."
+      }
+    ],
+    "actions": [
+      {
+        "op": "run",
+        "ok": true,
+        "detail": "bun test test/gate.test.ts (gate restored)",
+        "result": "16 pass / 0 fail / 83 expect() calls"
+      },
+      {
+        "op": "mutate-and-run",
+        "ok": true,
+        "detail": "Disabled `if (!allowed.includes(sink.purpose))` branch, re-ran suite",
+        "result": "planted-leak tests go RED — confirms the purpose-mismatch check is load-bearing"
+      },
+      {
+        "op": "restore-and-run",
+        "ok": true,
+        "detail": "Restored gate.ts, re-ran suite",
+        "result": "16 pass / 0 fail (GREEN)"
+      }
+    ],
+    "assertions": [
+      { "kind": "verdict-equals", "ok": true, "detail": "leak" },
+      { "kind": "violation-field", "ok": true, "detail": "getContact.email / email_address" },
+      { "kind": "violation-purposes", "ok": true, "detail": "bound=send_calendar_invite observed=general_summary reason=purpose_mismatch" },
+      { "kind": "no-raw-secret-and-no-derived-token-in-output", "ok": true, "detail": "raw value absent; no fingerprint/hash field present; verdict is structural-only" }
+    ],
+    "evidence": [
+      {
+        "kind": "test-suite",
+        "path": "test/gate.test.ts",
+        "checksum": "sha256:fee027b2ef84baa544f0d1e90569bb56ea6233f2ce18ffcd3d0b4f6b14b627dc",
+        "command": "bun test",
+        "result": "16 pass / 0 fail / 83 expect() calls"
+      },
+      {
+        "kind": "primitive-source",
+        "path": "src/gate.ts",
+        "checksum": "sha256:9be3396d8d0ac57f031ee5c774bd98a9756cdbaa96ab1ef838c3313100b2d946"
+      },
+      {
+        "kind": "policy-source",
+        "path": "src/policy.ts",
+        "checksum": "sha256:794689f67995cc075ea9010e7869da6ac9a5d91ecdea1b41554e71bc7c8b9150"
+      },
+      {
+        "kind": "verdict-sample",
+        "note": "Real gate() output, redaction-safe (no raw secret).",
+        "value": {
+          "verdict": "leak",
+          "violations": [
+            {
+              "sinkId": "sink-summary",
+              "sinkKind": "user_message",
+              "fieldPath": "getContact.email",
+              "privateClass": "email_address",
+              "boundPurpose": "send_calendar_invite",
+              "observedPurpose": "general_summary",
+              "reason": "purpose_mismatch"
+            }
+          ],
+          "scanned": { "sinks": 1, "trackedFields": 1 },
+          "policyVersion": "toolprivacy.policy.v0.0.1"
+        }
+      }
+    ],
+    "resources": {
+      "model": "claude-opus-4-8",
+      "tokens": null,
+      "moneyUsd": null,
+      "wallMinutes": null,
+      "attempts": 1,
+      "humanClarifications": 0
+    }
+  },
+  "projection": {
+    "valueHorizon": "weeks-to-months",
+    "mechanisms": [
+      "A deterministic, cheap pre-ship privacy referee that any tool-using agent can call instead of (or before) a non-deterministic LLM judge.",
+      "Receipts emitted in proof-spec + goodput shape so other notebooks (gateproof, mergegate, My AX) can consume them directly."
+    ],
+    "notes": "Context only. Not a score. The gate is proven on hand-built GateInput fixtures, NOT yet on a real agent wire (see status.json unproven[])."
+  },
+  "realization": {
+    "links": []
+  }
+}

@@ -1,0 +1,22 @@
+diff --git a/package.json b/package.json
+index 708299f9585641f59bf709dec505c85c268028af..4ef51d824bd855b7e30faf101a450478a1482fcf 100644
+--- a/package.json
++++ b/package.json
+@@ -16,12 +16,12 @@
+ 		"dist"
+ 	],
+ 	"type": "module",
+-	"types": "./dist/index.d.cts",
++	"types": "./dist/index.d.mts",
+ 	"exports": {
+-		".": "./src/index.ts",
+-		"./ai-sdk": "./src/ai-sdk.ts",
+-		"./react": "./src/react/index.tsx",
+-		"./react/ai-sdk": "./src/react/ai-sdk.tsx",
++		".": "./dist/index.mjs",
++		"./ai-sdk": "./dist/ai-sdk.mjs",
++		"./react": "./dist/react/index.mjs",
++		"./react/ai-sdk": "./dist/react/ai-sdk.mjs",
+ 		"./package.json": "./package.json"
+ 	},
+ 	"publishConfig": {

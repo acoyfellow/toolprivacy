@@ -1,0 +1,29 @@
+{
+  "name": "toolprivacy-dogfood",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "AX-branded React + Cloudflare Worker dogfood surface that renders the toolprivacy gate's leak/verdict output as generative UI (gen-ui consumption pattern).",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "jsx2ui": "^0.0.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260629.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  },
+  "patchedDependencies": {
+    "jsx2ui@0.0.3": "patches/jsx2ui@0.0.3.patch"
+  }
+}

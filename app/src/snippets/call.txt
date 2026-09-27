@@ -1,0 +1,21 @@
+// gate() is a pure function from this notebook's src/ (not a published package)
+import { gate } from './gate';
+
+const verdict = gate({
+  // what each tool call returned, and WHY it was fetched
+  toolResults: [{
+    toolCallId: 'tc-1',
+    toolName: 'getContact',
+    declaredPurpose: 'send_calendar_invite',
+    fields: { email: 'alice@example.invalid' },
+  }],
+  // everything about to leave the agent, each with its own purpose
+  outbound: [{
+    sinkId: 'sink-summary',
+    kind: 'user_message',
+    purpose: 'general_summary',
+    content: 'Here is your week. I also noticed alice@example.invalid.',
+  }],
+});
+
+if (verdict.verdict === 'leak') blockBeforeShip(verdict);
